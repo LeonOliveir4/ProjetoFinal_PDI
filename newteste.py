@@ -1,58 +1,104 @@
 import cv2
 import numpy as np
 
-mousePos = []
+# ============================
+# Função para ordenar os 4 pontos
+# ============================
+def ordenar_pontos(pontos):
+    """
+    Ordena os 4 pontos no formato:
+    [top-left, top-right, bottom-left, bottom-right]
+    """
+    pontos = np.array(pontos, dtype="float32")
 
+    soma = pontos.sum(axis=1)
+    dif = np.diff(pontos, axis=1)
+
+    ordenado = np.zeros((4, 2), dtype="float32")
+    ordenado[0] = pontos[np.argmin(soma)]     # top-left
+    ordenado[3] = pontos[np.argmax(soma)]     # bottom-right
+    ordenado[1] = pontos[np.argmin(dif)]      # top-right
+    ordenado[2] = pontos[np.argmax(dif)]      # bottom-left
+
+    return ordenado
+
+# ============================
+# Função principal de recorte
+# ============================
+def processar_transformacao():
+    global mousePos
+
+    if len(mousePos) != 4:
+        print("Erro: é necessário selecionar exatamente 4 pontos.")
+        return
+
+    oldTransform = ordenar_pontos(mousePos)
+
+    # Define nova largura e altura baseadas na geometria dos pontos
+    (tl, tr, bl, br) = oldTransform
+    wA = np.linalg.norm(br - bl)
+    wB = np.linalg.norm(tr - tl)
+    hA = np.linalg.norm(tr - br)
+    hB = np.linalg.norm(tl - bl)
+
+    width = int(max(wA, wB))
+    height = int(max(hA, hB))
+
+    newTransform = np.float32([
+        [0, 0],
+        [width, 0],
+        [0, height],
+        [width, height]
+    ])
+
+    M = cv2.getPerspectiveTransform(oldTransform, newTransform)
+    dst = cv2.warpPerspective(imagem_original, M, (width, height))
+
+    cv2.imshow('Recorte', dst)
+
+# ============================
+# Função de clique do mouse
+# ============================
 def click_event(event, x, y, flags, params):
+    global mousePos, imagem_para_cliques
+
     if event == cv2.EVENT_LBUTTONDOWN:
         print(f"Coordenada capturada: ({x}, {y})")
         mousePos.append([x, y])
 
-        # Exibir ponto clicado na imagem
-        cv2.circle(imagem_colorida, (x, y), 5, (43, 255, 0), -1)
-        cv2.imshow('Image', imagem_colorida)
+        # Desenhar ponto clicado
+        cv2.circle(imagem_para_cliques, (x, y), 5, (43, 255, 0), -1)
+        cv2.imshow('Image', imagem_para_cliques)
 
-        # Quando quatro pontos forem coletados, iniciar transformação
         if len(mousePos) == 4:
             processar_transformacao()
 
-def processar_transformacao():
-    global mousePos
-    # Garantir que temos 4 pontos exatos
-    if len(mousePos) != 4:
-        print("Erro: é necessário selecionar exatamente 4 pontos.")
-        return
-    
-    # Ordenar pontos corretamente para evitar distorções
-    mousePos = sorted(mousePos, key=lambda p: (p[1], p[0]))  # Primeiro ordena por Y, depois por X
+            # Resetar pontos e imagem de exibição
+            mousePos = []
+            imagem_para_cliques = imagem_original.copy()
+            cv2.imshow('Image', imagem_para_cliques)
 
-    # Criar matriz de transformação
-    oldTransform = np.float32(mousePos)
+# ============================
+# Execução principal
+# ============================
 
-    # Determinar largura e altura do novo recorte
-    x_vals = [p[0] for p in mousePos]
-    y_vals = [p[1] for p in mousePos]
+# Carrega imagem
+imagem_original = cv2.imread("images.jpg")
 
-    w = max(x_vals) - min(x_vals)
-    h = max(y_vals) - min(y_vals)
+if imagem_original is None:
+    raise ValueError("Não foi possível carregar a imagem.")
 
-    newTransform = np.float32([[0, 0], [w, 0], [0, h], [w, h]])
+imagem_para_cliques = imagem_original.copy()
+mousePos = []
 
-    # Aplicar transformação
-    M = cv2.getPerspectiveTransform(oldTransform, newTransform)
-    dst = cv2.warpPerspective(imagem_colorida, M, (w, h))
-
-    # Exibir resultado
-    cv2.imshow('Output', dst)
-
-# Carregar imagem
-imagem_colorida = cv2.imread("/home/ufabc/Downloads/images.jpeg")
-
-if imagem_colorida is None:
-    raise ValueError("Não foi possível carregar a imagem. Verifique o caminho.")
-
-cv2.imshow('Image', imagem_colorida)
+# Mostra imagem
+cv2.imshow('Image', imagem_para_cliques)
 cv2.setMouseCallback('Image', click_event)
 
-cv2.waitKey(0)
+# Espera até apertar ESC
+while True:
+    key = cv2.waitKey(1)
+    if key == 27:  # Tecla ESC
+        break
+
 cv2.destroyAllWindows()
