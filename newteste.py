@@ -6,6 +6,37 @@ from morph import *
 
 mousePos = []
 
+# ---------------------------------------------------------
+# Função auxiliar para exibir imagens lado a lado no notebook
+# ---------------------------------------------------------
+def show_images(images, titles=None, cmap=None, size=(15, 5)):
+    """
+    Exibe uma lista de imagens lado a lado usando Matplotlib.
+    images: lista de arrays (BGR ou escala de cinza)
+    titles: lista de títulos para cada imagem
+    cmap: se deseja exibir em escala de cinza, use 'gray'
+    size: tamanho da figura
+    """
+    n = len(images)
+    if titles is None:
+        titles = [f"Imagem {i}" for i in range(n)]
+    plt.figure(figsize=size)
+    for i, img in enumerate(images):
+        plt.subplot(1, n, i+1)
+        if cmap == 'gray':
+            plt.imshow(img, cmap='gray')
+        else:
+            # Se for imagem em BGR, converte para RGB antes de exibir
+            if len(img.shape) == 3:
+                img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                plt.imshow(img_rgb)
+            else:
+                plt.imshow(img, cmap='gray')
+        plt.title(titles[i])
+        plt.axis('off')
+    plt.show()
+
+#Função para detectar o click do mouse
 def click_event(event, x, y, flags, params):
     if event == cv2.EVENT_LBUTTONDOWN:
         print(f"Coordenada capturada: ({x}, {y})")
@@ -19,6 +50,7 @@ def click_event(event, x, y, flags, params):
         if len(mousePos) == 4:
             processar_transformacao()
 
+#Função para processar a paralaxe do sistema
 def processar_transformacao():
     global mousePos
     global dst
@@ -68,3 +100,140 @@ grayImage = cv2.equalizeHist(grayImage)
 cv2.imshow('gray',grayImage)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+#Imagem salva
+'''Inserir uma interface (terminal?) para ciclar entre as funcionalidades'''
+
+# ---------------------------------------------------------
+# 2) Filtragem de Imagens (Remoção de ruídos, melhoria de nitidez)
+# ---------------------------------------------------------
+# Exemplo de filtragem com blur Gaussiano para redução de ruído
+gauss = cv2.GaussianBlur(imagem_colorida, (5, 5), 0)
+
+# Exemplo de filtro de mediana (geralmente eficaz para remover ruídos do tipo sal e pimenta)
+mediana = cv2.medianBlur(imagem_colorida, 5)
+
+show_images([imagem_colorida, gauss, mediana],
+            ["Original", "Gaussian Blur", "Mediana"])
+
+# ---------------------------------------------------------
+# 4) Histograma e Equalização
+# ---------------------------------------------------------
+# Converter para escala de cinza
+imagem_cinza = cv2.cvtColor(imagem_colorida, cv2.COLOR_BGR2GRAY)
+
+# Equalização de histograma
+imagem_equalizada = cv2.equalizeHist(imagem_cinza)
+
+show_images([imagem_cinza, imagem_equalizada],
+            ["Escala de Cinza Original", "Equalizada"],
+            cmap='gray')
+
+# Exemplo de exibição de histogramas
+# (apenas para fins de visualização, não é obrigatório)
+plt.figure(figsize=(10, 4))
+plt.hist(imagem_cinza.ravel(), 256, [0, 256])
+plt.title("Histograma - Imagem Original (em Cinza)")
+plt.show()
+
+plt.figure(figsize=(10, 4))
+plt.hist(imagem_equalizada.ravel(), 256, [0, 256])
+plt.title("Histograma - Imagem Equalizada (em Cinza)")
+plt.show()
+
+# ---------------------------------------------------------
+# 5) Morfologia Matemática (Segmentação/Realce de bordas, remoção de ruídos)
+# ---------------------------------------------------------
+# Exemplo de abertura (opening) para remover ruídos pontuais
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+imagem_opening = cv2.morphologyEx(imagem_equalizada, cv2.MORPH_OPEN, kernel)
+
+# Exemplo de dilatação para destacar estruturas claras
+imagem_dilatada = cv2.dilate(imagem_opening, kernel, iterations=1)
+
+show_images([imagem_equalizada, imagem_opening, imagem_dilatada],
+            ["Equalizada", "Abertura (Opening)", "Dilatação"],
+            cmap='gray')
+
+# ---------------------------------------------------------
+# 6) Segmentação Avançada
+#    Aplicaremos Watershed + Transformada de Distância + Labeling
+# ---------------------------------------------------------
+
+# (a) Threshold inicial para separar fundo/objeto de forma grosseira
+_, thresh = cv2.threshold(imagem_equalizada, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+# (b) Operações morfológicas para remover falhas no threshold
+# Por exemplo: abertura seguida de dilatação
+kernel_seg = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_seg, iterations=2)
+sure_bg = cv2.dilate(opening, kernel_seg, iterations=3)  # área de fundo provável
+
+# (c) Transformada de distância para encontrar regiões que são certamente primeiro plano
+dist_transform = cv2.distanceTransform(opening, cv2.DIST_L2, 5)
+# Ajuste do fator 0.7 conforme a imagem
+_, sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(), 255, 0)
+sure_fg = np.uint8(sure_fg)
+
+# (d) Região desconhecida (fica entre o primeiro plano e o fundo prováveis)
+unknown = cv2.subtract(sure_bg, sure_fg)
+
+# (e) Labeling para separar componentes
+# connectedComponents retorna o número de rótulos e a matriz de labels
+num_objetos, markers = cv2.connectedComponents(sure_fg)
+
+# Importante: para usar watershed, precisamos que os marcadores sejam > 0
+# e que pixels de fundo sejam marcados como 0.
+# Uma técnica comum: soma 1 para que o fundo (antes 0) vire 1, e os objetos comecem em 2.
+markers = markers + 1
+
+# Marca a região desconhecida como 0
+markers[unknown == 255] = 0
+
+# Converter original para BGR se necessário (já está em BGR, mas vamos garantir outra cópia)
+imagem_ws = imagem_colorida.copy()
+
+# (f) Aplicar watershed
+markers = cv2.watershed(imagem_ws, markers)
+
+# Onde o watershed marcou como -1, temos fronteiras
+imagem_ws[markers == -1] = [0, 0, 255]  # pinta as fronteiras de vermelho
+
+# ---------------------------------------------------------
+# Exibir resultados da segmentação
+# ---------------------------------------------------------
+show_images([
+    thresh,
+    opening,
+    sure_bg,
+    dist_transform,
+    sure_fg
+],
+[
+    "Threshold Otsu",
+    "Opening",
+    "Fundo provável",
+    "Transformada de Distância",
+    "Primeiro plano provável"
+],
+cmap='gray',
+size=(20, 5))
+
+show_images([
+    unknown,
+    imagem_ws
+],
+[
+    "Região desconhecida",
+    "Watershed (Bordas em Vermelho)"
+],
+size=(10, 5))
+
+# Realizando o 'Labeling' final (para contagem de objetos)
+# Basta lembrar que connectedComponents já retornou 'num_objetos'
+# Observe que esse 'num_objetos' inclui também o rótulo de fundo
+print(f"Número de rótulos (incluindo fundo): {num_objetos}")
+print("Obs.: O rótulo 0 representa o fundo na imagem binária.")
+
+# Fim do notebook
+print("Processamento concluído!")
