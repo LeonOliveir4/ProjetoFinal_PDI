@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 print(os.getcwd())
-from morph import *
+#from morph import *
 
 mousePos = []
 
@@ -96,13 +97,180 @@ cv2.destroyAllWindows()
 
 #Start post processing
 grayImage = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
-grayImage = cv2.equalizeHist(grayImage)
-cv2.imshow('gray',grayImage)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+#cv2.imshow('gray',grayImage)
+#cv2.waitKey(0)
+#cv2.destroyAllWindows()
 
 #Imagem salva
+#-------------------------------------------------------------------------------------------------------------------------------
+#Função para separar o pixel do histograma
+def __derivada(pixelAnt,pixelDep,array):
+        """
+        Calcula a derivada entre dois pontos em uma lista.
+
+        Args:
+            pixelAnt (int): Índice do ponto anterior.
+            pixelDep (int): Índice do ponto seguinte.
+            array (list): Lista de valores.
+
+        Returns:
+            float: A derivada entre os pontos.
+        """
+        #Derivada de um pixel: dy/dx = (y2-y1)/1
+        return (array[pixelDep]-array[pixelAnt])
+def encontrar_pixel_mais_prox(ponto, comprimentoDeOnda):
+        """
+        Encontra o índice do ponto mais próximo em uma lista de comprimentos de onda.
+
+        Args:
+            ponto (float): O ponto de referência.
+            comprimentoDeOnda (list): Lista de comprimentos de onda.
+
+        Returns:
+            int: O índice do ponto mais próximo.
+        """
+        #Encontra a distancia minima entre os pontos do espectro
+        proximidadePonto = [x-ponto for x in comprimentoDeOnda] 
+        index = ((np.abs(proximidadePonto)).argmin())
+        return index
+def isolar_pico(centroPico,intensidadeEspectro, comprimentoDeOnda=None):
+        """
+        Isola um pico em um espectro.
+
+        Args:
+            centroPico (float): O centro estimado do pico.
+            intensidadeEspectro (list): Lista de intensidades do espectro.
+            comprimentoDeOnda (list, optional): Lista de comprimentos de onda. Se não fornecido, usa o valor padrão.
+
+        Returns:
+            tuple: Uma tupla contendo o comprimento de onda do pico, do ponto de background à esquerda e à direita.
+        """
+        #Caso nao seja passado um comprimento de onda
+        if (comprimentoDeOnda == None):
+            #Utilizar o comprimento de onda encontrado no arquivo
+            comprimentoDeOnda = []
+            for i in range(len(intensidadeEspectro)):
+                comprimentoDeOnda.append(i)
+        #Variaveis para retornar
+        pontoPico = -1
+        pontoBackgroundEsq = -1
+        pontoBackgroundDir = -1
+        #Variaveis para verificar pontos fora do intervalo de comprimentos de onda
+        enableDerivadaEsq = False
+        enableDerivadaDir = False
+        #Criando variaveis para procurar o pico e os backgrounds - Usada inicialmente para procurar o pico 
+        possivelPonto = encontrar_pixel_mais_prox(centroPico, comprimentoDeOnda)
+        #Caso o ponto nao esteja bem comportado dentro do espectro
+        if possivelPonto == 0 or possivelPonto == len(comprimentoDeOnda) - 1:
+            #Caso o ponto eseja proximo da lateral esquerda
+            if possivelPonto == 0:
+                enableDerivadaDir = True
+                pontoBackgroundEsq = 0
+                derivadaEsq = -1
+            #Caso o ponto esteja proximo da lateral direita
+            else:
+                enableDerivadaEsq = True
+                pontoBackgroundDir = len(comprimentoDeOnda)-1
+                derivadaDir= -1
+            #derivada = -1 -garantir que ela seja detectada como menor que 0
+            #para a rotina detectar mais tarde
+        else:
+            #Permitir o calculo para as duas derivadas
+            enableDerivadaEsq = True
+            enableDerivadaDir = True
+        
+        #Funcao para procurar pico
+        #Variaveis auxiliares
+        if enableDerivadaEsq:
+            derivadaEsq = __derivada(possivelPonto,possivelPonto -1,intensidadeEspectro)
+        if enableDerivadaDir:
+            derivadaDir = __derivada(possivelPonto,possivelPonto + 1,intensidadeEspectro)
+        #Manter a funcao rodando enquanto o ponto nao for um pico encontrado pelas derivadas
+        while(derivadaEsq >= 0 or derivadaDir >= 0):
+            #Verifica a se o pico esta subindo para...
+            #A esquerda:
+            if derivadaEsq > 0 and derivadaDir < 0 :
+                possivelPonto -= 1
+            #A direita:
+            elif derivadaEsq < 0 and derivadaDir > 0 :
+                possivelPonto += 1
+            #Caso as duas derivadas sejam positivas
+            elif derivadaEsq > 0 and derivadaDir > 0:
+                #Verificar qual esta com maior tendencia de subida
+                if derivadaEsq > derivadaDir:
+                    possivelPonto -= 1
+                else:
+                    possivelPonto += 1
+            #Caso o pico esteja saturado - valores maximos iguais
+            elif derivadaEsq == 0 or derivadaDir == 0:
+                #A derivada esta proxima do centro
+                break
+            #Recalcular as derivadas no novo possivel ponto
+            if (possivelPonto > 0 and possivelPonto < len(comprimentoDeOnda)):
+                derivadaEsq = __derivada(possivelPonto,possivelPonto -1,intensidadeEspectro)
+                derivadaDir = __derivada(possivelPonto,possivelPonto + 1,intensidadeEspectro)
+        
+        #Salva o pico encontrado
+        pontoPico = possivelPonto
+        
+        #Funcoes para procurar os valores de background
+        #Background esquerdo:
+        #Reseta as variaveis
+        possivelPonto = pontoPico
+        derivadaEsq = __derivada(possivelPonto,possivelPonto -1,intensidadeEspectro)
+        #Procura pelo menor ponto para background
+        while (derivadaEsq <= 0):
+            possivelPonto -= 1
+            derivadaEsq = __derivada(possivelPonto,possivelPonto -1,intensidadeEspectro)
+        #Salva o ponto de background
+        pontoBackgroundEsq = possivelPonto
+        
+        #Background direito:
+        #Reseta as variaveis
+        possivelPonto = pontoPico
+        derivadaDir = __derivada(possivelPonto,possivelPonto + 1,intensidadeEspectro) 
+        #Procura pelo menor ponto para background
+        while (derivadaDir <= 0):
+            possivelPonto += 1
+            derivadaDir = __derivada(possivelPonto,possivelPonto + 1,intensidadeEspectro) 
+        #Salva o ponto de background
+        pontoBackgroundDir = possivelPonto
+
+        #Retorna os valores da funcao
+        return comprimentoDeOnda[pontoPico],comprimentoDeOnda[pontoBackgroundEsq],comprimentoDeOnda[pontoBackgroundDir]
+
 '''Inserir uma interface (terminal?) para ciclar entre as funcionalidades'''
+#Histograma
+mousePos = []
+def get_pixel_value(event, x, y, flags, params):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        print(f"Coordenada capturada: ({x}, {y})")
+        mousePos.append([x, y])
+        #print(mousePos)
+        # Sai do click 
+        #cv2.destroyAllWindows()
+        cv2.waitKey(1)
+
+imgHist = cv2.calcHist([grayImage], [0], None, [256], [0, 256])
+print("Histograma", len(imgHist))
+cv2.imshow('Image', grayImage)
+print('a')
+cv2.setMouseCallback('Image', get_pixel_value)
+print('a')
+cv2.waitKey(0)
+print('a')
+#cv2.destroyAllWindows()
+
+print('aqui')
+x,y = mousePos[0]
+pixelValue = grayImage[y][x]
+
+print(pixelValue)
+#Get histogram treshold
+centerValue,leftTH,rigthTH = isolar_pico(pixelValue,imgHist)
+
+equalizedImage = cv2.equalizeHist(grayImage)
+cv2.imshow('Image',equalizedImage)
 
 # ---------------------------------------------------------
 # 2) Filtragem de Imagens (Remoção de ruídos, melhoria de nitidez)
