@@ -59,7 +59,7 @@ def show_images(images, titles=None, cmap=None, size=(15, 5)):
 # 1) Leitura da imagem
 # ---------------------------------------------------------
 # Substitua "caminho_da_imagem.jpg" pelo arquivo que deseja analisar.
-imagem_colorida = cv2.imread("/home/ufabc/Downloads/images.jpeg")
+imagem_colorida = cv2.imread("images.jpg")
 
 # Se a imagem não for carregada, a variável ficará como None.
 # Verificamos para evitar erros.
