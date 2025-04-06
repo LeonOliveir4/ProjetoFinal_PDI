@@ -5,7 +5,7 @@ License MIT
 https://github.com/fzampirolli/morph
 25 January 2024
 """
-import matplotlib.pyplot as plt, numpy as np, cv2, requests, sys, subprocess
+import matplotlib.pyplot as plt, numpy as np, cv2, sys, subprocess
 from PIL import Image
 from skimage import io
 class mm(object):

@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from morph import *
 print(os.getcwd())
 #from morph import *
 
@@ -84,7 +85,7 @@ def processar_transformacao():
     return dst
 
 # Carregar imagem
-imagem_colorida = cv2.imread("/home/ufabc/Downloads/images.jpg")
+imagem_colorida = cv2.imread("./images.jpg")
 
 if imagem_colorida is None:
     raise ValueError("Não foi possível carregar a imagem. Verifique o caminho.")
@@ -248,29 +249,50 @@ def get_pixel_value(event, x, y, flags, params):
         mousePos.append([x, y])
         #print(mousePos)
         # Sai do click 
-        #cv2.destroyAllWindows()
-        cv2.waitKey(1)
+        cv2.destroyAllWindows()
+        #cv2.waitKey(0)
 
-imgHist = cv2.calcHist([grayImage], [0], None, [256], [0, 256])
-print("Histograma", len(imgHist))
-cv2.imshow('Image', grayImage)
-print('a')
+#Equalized image
+equalizedImage = cv2.equalizeHist(grayImage)
+totalImage = np.vstack((grayImage,equalizedImage))
+#Plot do histograma
+cv2.imshow('Image', totalImage)
 cv2.setMouseCallback('Image', get_pixel_value)
-print('a')
 cv2.waitKey(0)
-print('a')
 #cv2.destroyAllWindows()
 
-print('aqui')
+#Get mouse position
 x,y = mousePos[0]
-pixelValue = grayImage[y][x]
+
+#Switch case based on the pixel height 
+#Get old height
+h = len(grayImage)
+selectedImage = []
+#Check if clicked image was the equalized one
+if y >= h:
+    selectedImage = equalizedImage
+    #Remove the height of previous image
+    y = y-h
+#Else
+else:
+    selectedImage = grayImage
+#Get pixel color value
+pixelValue = selectedImage[y][x]
+
+#Plot histogram
+imgHist = mm.hist(selectedImage)
+plt.plot(range(len(imgHist)),imgHist,color='tab:orange')
+plt.axvline(pixelValue)
+plt.show()
+print('aqui')
+
 
 print(pixelValue)
 #Get histogram treshold
 centerValue,leftTH,rigthTH = isolar_pico(pixelValue,imgHist)
 
-equalizedImage = cv2.equalizeHist(grayImage)
-cv2.imshow('Image',equalizedImage)
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 
 # ---------------------------------------------------------
 # 2) Filtragem de Imagens (Remoção de ruídos, melhoria de nitidez)
