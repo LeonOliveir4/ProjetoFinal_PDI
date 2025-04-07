@@ -3,6 +3,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from morph import *
+import copy
 print(os.getcwd())
 #from morph import *
 
@@ -85,7 +86,7 @@ def processar_transformacao():
     return dst
 
 # Carregar imagem
-imagem_colorida = cv2.imread("./images.jpg")
+imagem_colorida = cv2.imread("./IMG_20250323_0002.jpg")
 
 if imagem_colorida is None:
     raise ValueError("Não foi possível carregar a imagem. Verifique o caminho.")
@@ -284,33 +285,65 @@ imgHist = mm.hist(selectedImage)
 plt.plot(range(len(imgHist)),imgHist,color='tab:orange')
 plt.axvline(pixelValue)
 plt.show()
-print('aqui')
+def th_calculator(image,leftTH,rigthTH):
+    #Create mask between left and rigth TH
+    #Get value to reshape
+    h,w = image.shape
+    #Create new string
+    thImage = copy.deepcopy(image.ravel())
+    #Get threshold
+    for i in range(len(image.ravel())):
+        if image.ravel()[i] >= leftTH and image.ravel()[i] <= rigthTH:
+            #Add value to treshold
+            thImage[i] = 255
+        else:
+            thImage[i] = 0
 
-
-print(pixelValue)
-#Get histogram treshold
-centerValue,leftTH,rigthTH = isolar_pico(pixelValue,imgHist)
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    #Reshape image
+    thImage = thImage.reshape(h,w)
+    cv2.imshow('Threshold',thImage)
+    cv2.waitKey(0)
+    return thImage
+latch = True
+while latch:
+    Value = input("Digite '0' para utilizar a derivada e '1' para utilizar threshold numérico ('s' para salvar e sair, 'x' para sair sem salvar): ")
+    if Value == '0':
+        #Get histogram treshold
+        centerValue,leftTH,rigthTH = isolar_pico(pixelValue,imgHist)
+        newImage = th_calculator(selectedImage,leftTH,rigthTH)
+    elif Value == '1':
+        imgHist = mm.hist(selectedImage)
+        plt.plot(range(len(imgHist)),imgHist,color='tab:orange')
+        plt.axvline(pixelValue)
+        plt.show()
+        print(f'Valor do pixel selecionado: {pixelValue}')
+        leftTH = int(input('Janela esquerda: '))
+        rigthTH = int(input('Janela direita: '))
+        newImage = th_calculator(selectedImage,leftTH,rigthTH)
+    elif Value == 's':
+        selectedImage = newImage
+        latch = False
+    elif Value == 'x':
+        latch = False
 
 
 # ---------------------------------------------------------
 # 2) Filtragem de Imagens (Remoção de ruídos, melhoria de nitidez)
 # ---------------------------------------------------------
 # Exemplo de filtragem com blur Gaussiano para redução de ruído
-gauss = cv2.GaussianBlur(imagem_colorida, (5, 5), 0)
+gauss = cv2.GaussianBlur(selectedImage, (5, 5), 0)
 
 # Exemplo de filtro de mediana (geralmente eficaz para remover ruídos do tipo sal e pimenta)
-mediana = cv2.medianBlur(imagem_colorida, 5)
+mediana = cv2.medianBlur(selectedImage, 5)
 
-show_images([imagem_colorida, gauss, mediana],
+show_images([selectedImage, gauss, mediana],
             ["Original", "Gaussian Blur", "Mediana"])
 
 # ---------------------------------------------------------
 # 4) Histograma e Equalização
 # ---------------------------------------------------------
 # Converter para escala de cinza
-imagem_cinza = cv2.cvtColor(imagem_colorida, cv2.COLOR_BGR2GRAY)
+imagem_cinza = cv2.cvtColor(selectedImage, cv2.COLOR_BGR2GRAY)
 
 # Equalização de histograma
 imagem_equalizada = cv2.equalizeHist(imagem_cinza)
