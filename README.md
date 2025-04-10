@@ -1,46 +1,73 @@
 # ProjetoFinal_PDI
 
-Projeto da disciplina de **Processamento Digital de Imagens (PDI)** - UFABC
+Projeto da disciplina de Processamento Digital de Imagens (PDI) - UFABC
 
-- Leonardo Pires de Oliveira - 11201920744  
-- Leonardo Fabiano de Souza - 11201721317  
-- Murilo Valentim Alves - 11202130884  
+**Autores:**
+- Leonardo Pires de Oliveira - 11201920744
+- Leonardo Fabiano de Souza - 11201721317
+- Murilo Valentim Alves - 11202130884
 - Stephany Caroline C. Santanna - 11201920287
+
 ---
 
 ## 🧠 Objetivo do Projeto
 
-O intuito da aplicação é **realçar letras ou conteúdos que estão quase ilegíveis** em documentos, componentes eletrônicos ou superfícies diversas — com o objetivo de **facilitar a leitura ou análise visual** desses elementos.  
+Desenvolver uma ferramenta interativa para aplicar técnicas de Processamento Digital de Imagens (PDI) com foco na **realção de letras ou elementos visuais de difícil leitura**, presentes em:
+- documentos escaneados;
+- componentes eletrônicos (ex: chips);
+- superfícies texturizadas ou desgastadas.
 
-A aplicação permite ao usuário aplicar uma série de técnicas de PDI de forma interativa, visual e intuitiva.
-
----
-
-## 🧰 Funcionalidades
-
-- Seleção de **Região de Interesse (ROI)** com transformação por perspectiva;
-- Conversão para **escala de cinza** e **equalização de histograma**;
-- Visualização do histograma e **seleção de pixel** de referência;
-- Aplicação de **threshold** (automático via derivada ou valores manuais);
-- Aplicação de **filtros** (Gaussian Blur e Mediana);
-- **Operações morfológicas**: abertura e dilatação;
-- **Segmentação via Watershed**;
-- Interface interativa via **terminal** ou **Tkinter (GUI)**.
+A aplicação foi criada com interface Tkinter e funcionalidades modulares que permitem selecionar regiões, visualizar histograma, aplicar filtros, binarizações, morfologia e segmentação por Watershed.
 
 ---
 
-## 📦 Requisitos
+## 🛠️ Funcionalidades (e conceitos teóricos)
+
+### ✅ **Seleção de ROI com correção por perspectiva**
+Permite ao usuário selecionar 4 pontos em qualquer região da imagem. A função `cv2.getPerspectiveTransform()` é usada para retificar a região e corrigir inclinação/torção (ex: chips inclinados).
+
+### ✅ **Conversão para grayscale e equalização de histograma**
+Usa `cv2.cvtColor()` e `cv2.equalizeHist()` para:
+- reduzir informação de cor;
+- redistribuir os níveis de intensidade;
+- melhorar o contraste geral, especialmente em regiões escuras/clipped.
+
+### ✅ **Visualização do histograma**
+Plota a distribuição de intensidades com `matplotlib`, fornecendo base para aplicar thresholds manuais ou entender o comportamento da imagem.
+
+### ✅ **Threshold (binarização)**
+Opção de definir um intervalo de intensidade (limiar esquerdo e direito).
+- É aplicado com `np.where(...)`, gerando imagem binária personalizada.
+
+### ✅ **Filtros**
+Aplica dois filtros clássicos:
+- **Gaussian Blur**: suaviza a imagem usando distribuição normal 2D;
+- **Filtro da Mediana**: remove ruídos impulsivos (ex: sal e pimenta), preservando bordas.
+
+### ✅ **Operações Morfológicas**
+Usa `cv2.morphologyEx` e `cv2.dilate` para:
+- **Abertura** (remoção de ruídos pequenos);
+- **Dilatação** (expansão de regiões brancas).
+
+Usa kernel elíptico (5x5) para preservar formas arredondadas como letras.
+
+### ✅ **Segmentação com Watershed**
+- Aplica `cv2.distanceTransform` e `cv2.connectedComponents` para identificar regiões seguras de fundo e frente.
+- Usa `cv2.watershed()` para encontrar as bordas entre as regiões.
+- Contornos são desenhados em vermelho na imagem original.
+- A segmentação depende fortemente da equalização anterior para funcionar.
+
+---
+
+## 📆 Requisitos
 
 Instale as dependências com:
-
 ```bash
 pip install opencv-python numpy matplotlib
 ```
-
-Para usar a interface gráfica, o `tkinter` precisa estar instalado:
-
-### Linux (Debian/Ubuntu):
+Para interface GUI:
 ```bash
+# Em sistemas baseados em Debian/Ubuntu
 sudo apt-get install python3-tk
 ```
 
@@ -50,42 +77,42 @@ sudo apt-get install python3-tk
 
 ```
 ProjetoFinal_PDI/
-├── main.py              # Script principal
-├── interface.py         # Interface gráfica (Tkinter)
-├── IMG_2025XXXXX.jpg    # Imagem de exemplo (apenas para testes iniciais)
+├── teste_interface.py         # Interface Tkinter com seleção modular de etapas junto com codigo do projeto
+├── IMG_20250323_0002.jpg    # Imagem exemplo
 ├── README.md
 ```
+
 ---
 
 ## ▶️ Como Executar
 
-### Modo Terminal (CLI):
+### Modo Terminal (sem GUI):
 ```bash
 python3 main.py
 ```
 
-### Modo Interface Gráfica (GUI):
+### Modo Gráfico com Interface Tkinter:
 ```bash
 python3 interface.py
 ```
 
-Na interface, o usuário pode:
-- Selecionar imagem;
-- Marcar ROI com 4 cliques;
-- Aplicar etapas do processamento de forma modular;
-- Visualizar cada etapa com `OpenCV`.
+Na interface gráfica, o usuário pode:
+- Selecionar uma imagem;
+- Marcar uma ROI com 4 cliques;
+- Aplicar as etapas desejadas de forma modular;
+- Visualizar os resultados em janelas OpenCV.
 
 ---
 
-## 📌 Observações
+## 📅 Observações
 
-- As imagens podem estar em formatos `.jpg`, `.png`, `.bmp`, etc.
-- A ROI é obrigatoriamente selecionada com **4 pontos**.
-- Em caso de clique inválido, a aplicação será interrompida com aviso.
-- A aplicação foi projetada para ser simples e rápida de testar.
+- Suporta imagens .jpg, .png, .bmp, etc.
+- A ROI deve conter 4 cliques (cantos da região de interesse).
+- O programa mostra mensagens de erro e interrompe execução em casos inválidos.
+- O processamento não é destrutivo: a imagem original permanece intacta.
 
 ---
 
 ## 📄 Licença
 
-Este projeto foi desenvolvido como parte da disciplina de Processamento Digital de Imagens da UFABC. Uso acadêmico e não comercial.
+Projeto acadêmico desenvolvido como parte da disciplina de Processamento Digital de Imagens da UFABC. Uso livre para fins educacionais e não comerciais.
