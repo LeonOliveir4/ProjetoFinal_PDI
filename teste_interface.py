@@ -175,6 +175,41 @@ def select_image():
             var_watershed.set(False)
             equalized_flag = False
 
+def select_webcam():
+    global selected_image, equalized_flag
+    webcam = cv2.VideoCapture(0)
+
+    if webcam.isOpened():
+        print("Webcam Encontrada")
+        webcamCheck, frame = webcam.read()
+        print("Dados do frame:",frame.shape)
+        while webcamCheck:
+            webcamCheck, selected_image = webcam.read()
+            if frame is None:
+                messagebox.showerror("Erro", "Não foi possível carregar a imagem.")
+                webcam.release()
+                cv2.destroyAllWindows()
+                break
+            else:
+                cv2.imshow("Webcam", selected_image)
+                key = cv2.waitKey(30) #& 0xFF
+                # if cv2.getWindowProperty("Imagem Selecionada", cv2.WND_PROP_VISIBLE) >= 1:
+                #     cv2.destroyWindow("Imagem Selecionada")
+                if key != -1:
+                    cv2.destroyWindow("Webcam")
+                    cv2.imshow("Imagem Selecionada", selected_image)
+                    for _ in range(300):
+                        key = cv2.waitKey(1) & 0xFF
+                        if key in [27, ord('q'), ord(' ')] or cv2.getWindowProperty("Imagem Selecionada", cv2.WND_PROP_VISIBLE) < 1:
+                            break
+                    if cv2.getWindowProperty("Imagem Selecionada", cv2.WND_PROP_VISIBLE) >= 1:
+                        cv2.destroyWindow("Imagem Selecionada")
+                    lbl_file.config(text="Webcam")
+                    chk_watershed.config(state='disabled')
+                    var_watershed.set(False)
+                    equalized_flag = False
+                    break
+
 
 def on_equalize_checked():
     if var_equalize.get():
@@ -247,6 +282,9 @@ def run_pipeline():
 # --------------------------------------------------------
 btn_select = tk.Button(root, text="Selecionar Imagem", command=select_image)
 btn_select.pack(pady=10)
+
+btn_cam = tk.Button(root, text="Capturar Webcam", command=select_webcam)
+btn_cam.pack(pady=10)
 
 lbl_file = tk.Label(root, text="Nenhuma imagem selecionada")
 lbl_file.pack()
