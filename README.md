@@ -77,9 +77,10 @@ sudo apt-get install python3-tk
 
 ```
 ProjetoFinal_PDI/
-├── teste_interface.py         # Interface Tkinter com seleção modular de etapas junto com codigo do projeto
+├── interface.py         # Interface Tkinter com seleção modular de etapas junto com codigo do projeto
 ├── IMG_20250323_0002.jpg    # Imagem exemplo
 ├── README.md
+├── Etapa2_ModelagemFuncionalDoSistema.pdf
 ```
 
 ---
