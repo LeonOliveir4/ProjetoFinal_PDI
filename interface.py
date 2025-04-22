@@ -279,6 +279,7 @@ def run_pipeline():
             return
         equalized = convert_to_gray(processed_image)
         ws_img = watershed_segmentation(processed_image, equalized)
+        processed_image = ws_img.copy()
         cv2.imshow("Watershed Result", ws_img)
         wait_to_close_cv_window("Watershed Result")
     else:
@@ -325,10 +326,13 @@ def atualizar_TH(slider):
 
 
 def image_save():
-    filename = filedialog.asksaveasfile(filetypes=[('All Files','.'),('PNG','.png'),('JPEG','.jpeg'),('JPG','.jpg')],mode='w', defaultextension=".png")
-    if filename is None: # asksaveasfile return `None` if dialog closed with "cancel".
+    if processed_image is None:
+        messagebox.showerror("Erro", "Nenhuma imagem processada para salvar!")
         return
-    cv2.imwrite(filename.name,processed_image)
+    filename = filedialog.asksaveasfile(filetypes=[('PNG', '*.png'), ('JPEG', '*.jpeg'), ('JPG', '*.jpg')], mode='w', defaultextension=".png")
+    if filename is None:
+        return
+    cv2.imwrite(filename.name, processed_image)
     print('Imagem salva com sucesso!')
     
 
