@@ -111,10 +111,10 @@ def apply_filters(image):
     return gaussian, median
 
 def morphological_operations(image):
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    opening = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
-    dilation = cv2.dilate(opening, kernel, iterations=1)
-    return opening, dilation
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+    closing = cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
+    dilation = cv2.dilate(closing, kernel, iterations=1)
+    return closing, dilation
 
 def watershed_segmentation(original_image, mask_image):
     # Garante que a imagem seja BGR para desenhar contornos coloridos
@@ -268,6 +268,9 @@ def run_pipeline():
         img = median
 
     if var_morph.get():
+        # Garante que a imagem seja binária (0/255)
+        if len(np.unique(img)) > 2:
+            _, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
         _, dilation = morphological_operations(img)
         img = dilation
 
