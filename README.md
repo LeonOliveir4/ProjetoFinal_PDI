@@ -37,7 +37,8 @@ Plota a distribuição de intensidades com `matplotlib`, fornecendo base para ap
 
 ### ✅ **Threshold (binarização)**
 Opção de definir um intervalo de intensidade (limiar esquerdo e direito).
-- É aplicado com `np.where(...)`, gerando imagem binária personalizada.
+- É aplicado com `np.where(...)`, gerando imagem binária personalizada;
+- Ao selecionar a opção de treshold é aberto uma tela, com uma slide bar para facilitar o entendimento do usuário e facilitar a operação.
 
 ### ✅ **Filtros**
 Aplica dois filtros clássicos:
@@ -46,10 +47,10 @@ Aplica dois filtros clássicos:
 
 ### ✅ **Operações Morfológicas**
 Usa `cv2.morphologyEx` e `cv2.dilate` para:
-- **Abertura** (remoção de ruídos pequenos);
+- **Fechamento** (preenche pequenos buracos e conecta regiões próximas nos objetos);
 - **Dilatação** (expansão de regiões brancas).
 
-Usa kernel elíptico (5x5) para preservar formas arredondadas como letras.
+Usa kernel elíptico (2x2) para preservar formas arredondadas como letras.
 
 ### ✅ **Segmentação com Watershed**
 - Aplica `cv2.distanceTransform` e `cv2.connectedComponents` para identificar regiões seguras de fundo e frente.
