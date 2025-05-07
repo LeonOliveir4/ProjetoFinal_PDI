@@ -62,6 +62,13 @@ Usa kernel elíptico (2x2) para preservar formas arredondadas como letras.
 
 ## 📆 Requisitos
 
+Caso necessário, instalar arquivos sem permissão de admin, criar seu próprio env:
+```bash
+python3 -m venv myenv
+source myenv/bin/activate
+
+```
+
 Instale as dependências com:
 ```bash
 pip install opencv-python numpy matplotlib
@@ -69,6 +76,7 @@ pip install opencv-python numpy matplotlib
 Para interface GUI:
 ```bash
 # Em sistemas baseados em Debian/Ubuntu
+sudo apt-get update
 sudo apt-get install python3-tk
 ```
 
@@ -86,11 +94,6 @@ ProjetoFinal_PDI/
 ---
 
 ## ▶️ Como Executar
-
-### Modo Terminal (sem GUI):
-```bash
-python3 main.py
-```
 
 ### Modo Gráfico com Interface Tkinter:
 ```bash
