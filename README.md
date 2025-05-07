@@ -62,7 +62,7 @@ Usa kernel elíptico (2x2) para preservar formas arredondadas como letras.
 
 ## 📆 Requisitos
 
-Caso necessário, instalar arquivos sem permissão de admin, criar seu próprio env:
+Caso necessário, instalar arquivos sem permissão de admin, crie seu próprio env:
 ```bash
 python3 -m venv myenv
 source myenv/bin/activate
